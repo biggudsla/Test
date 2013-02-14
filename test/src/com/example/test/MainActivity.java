@@ -2,14 +2,19 @@ package com.example.test;
 
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+
+import com.example.test.picture;
 
 
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.LayoutInflater;
@@ -25,58 +30,71 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
 
+
 public class MainActivity extends Activity {
 
 	GridView gv;
 	private Context mContext;
-	int foldernum=0;
-	String p;
-	
+	OURdb mHelper;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
 		mContext = this;
-		
+	
 		gv = (GridView)findViewById(R.id.ImgGridView);
-		
-        
         final ImageAdapter ia = new ImageAdapter(this);
-
-        
         gv.setAdapter(ia);
-
-      //  gv.setVisibility(View.INVISIBLE);
-    
         gv.setOnItemClickListener(new OnItemClickListener(){
         	public void onItemClick(AdapterView<?> parent, View v, int position, long id){
-        		
-        		
-      //  		gv.setVisibility(View.INVISIBLE);
-        //		gv2.setVisibility(View.VISIBLE);
-        	//	p = thumbsBucketList.get(position);
         		ia.callImageViewer(position);
-        
         	}
         });
+        
 	
-	}
+    
+    	mHelper = new OURdb(this);
+		SQLiteDatabase db = mHelper.getWritableDatabase();
+//		ContentValues row = new ContentValues();
+//		row.put("pictureid", "_ID");
+//		row.put("diary", "DIARY");
+//		db.insert("db1", null, row);
+		Cursor cursor;
+//		cursor = db.query("db1", new String[] { "pictureid", "diary",
+//				"lati", "longi" }, null, null,
+//				null, null, null);
+		cursor = db.rawQuery("SELECT pictureid,diary,lati,longi FROM db1",null);
+		int num = 0;
+//		cursor.moveToFirst();
+		while (cursor.moveToNext()) {
+			for(int e=0; e<picture.picturelist.size(); e++)
+			{
+				if(picture.picturelist.get(e)._ID.equals(cursor.getString(0))){
+					picture.picturelist.get(e).DIARY = cursor.getString(1);
+					picture.picturelist.get(e).LATI = cursor.getString(2);
+					picture.picturelist.get(e).LONGI = cursor.getString(3);
+					
+					break;
+				}
+			}
+			num++;
+		}
+		Toast.makeText(this, Integer.toString(num) , Toast.LENGTH_SHORT).show();
+		cursor.close();
+		mHelper.close();
+		
+   }
+
+	
 	public class ImageAdapter extends BaseAdapter {
-		private String imgData;
-		private String geoData;
-		private ArrayList<String> thumbsDataList;
-		private ArrayList<String> thumbsIDList;
+		
 		private ArrayList<String> thumbsBucketList;
-/**/		
-/**/		private Integer[] Bucketnum;
 
 		ImageAdapter(Context c){
 			mContext = c;
-			thumbsDataList = new ArrayList<String>();
-			thumbsIDList = new ArrayList<String>();
-/**/			thumbsBucketList = new ArrayList<String>();
-/**/			getThumbInfo(thumbsIDList, thumbsDataList,thumbsBucketList);
+			thumbsBucketList = new ArrayList<String>();
+			getThumbInfo();
 			
 		}
 		
@@ -92,7 +110,7 @@ public class MainActivity extends Activity {
 		}
 		
 		public int getCount() {
-			return foldernum;
+			return  thumbsBucketList.size();
 		}
 
 		public Object getItem(int position) {
@@ -137,71 +155,68 @@ public class MainActivity extends Activity {
 			return v;
 		}
 		
-		private void getThumbInfo(ArrayList<String> thumbsIDs, ArrayList<String> thumbsDatas,ArrayList<String> thumbsBuckets){
-			String[] proj = {MediaStore.Images.Media._ID,
-							 MediaStore.Images.Media.DATA,
-							 MediaStore.Images.Media.DISPLAY_NAME,
-							 MediaStore.Images.Media.SIZE,
-/**/							 MediaStore.Images.Media.BUCKET_DISPLAY_NAME};
+		private void getThumbInfo(){
+			String[] proj = {MediaStore.Images.Media.LATITUDE,
+					MediaStore.Images.Media.LONGITUDE,
+					MediaStore.Images.Media._ID,
+					MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+					MediaStore.Images.Media.DATE_TAKEN,
+					MediaStore.Images.Media.DATA};
 			
-			Cursor imageCursor = managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-					proj, null, null, null);
-			
+			Cursor imageCursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+			proj, null, null, null);
+	
 			if (imageCursor != null && imageCursor.moveToFirst()){
-				String title;
-				String thumbsID;
-				String thumbsImageID;
-				String thumbsData;
-				String data;
-				String imgSize;
 				String bucketname;
-				String temp="";
-				
-				
-				
-				int thumbsIDCol = imageCursor.getColumnIndex(MediaStore.Images.Media._ID);
-				int thumbsDataCol = imageCursor.getColumnIndex(MediaStore.Images.Media.DATA);
-				int thumbsImageIDCol = imageCursor.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME);
-				int thumbsSizeCol = imageCursor.getColumnIndex(MediaStore.Images.Media.SIZE);
-				int thumbsBucketCol = imageCursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
-				int num = 0;
-				int check;
-				do {
-					thumbsID = imageCursor.getString(thumbsIDCol);
-					thumbsData = imageCursor.getString(thumbsDataCol);
-					thumbsImageID = imageCursor.getString(thumbsImageIDCol);
-					imgSize = imageCursor.getString(thumbsSizeCol);
-					bucketname = imageCursor.getString(thumbsBucketCol);
-					num++;
-					check=0;
-					
-					if (thumbsImageID != null){
-						thumbsIDs.add(thumbsID);
-						thumbsDatas.add(thumbsData);
-						for(int j= 0; j< thumbsBuckets.size(); j++ )
-						{
-							if(bucketname.equals(thumbsBuckets.get(j))){
-								check = 1;	
-								break;
-							}
-						}
-						if(check == 0){
-							thumbsBuckets.add(bucketname);
-							foldernum++;
-						}
-							
+				String idname;
+				String latiname;
+				String longiname;
+				String dataname;
+				String datename;		
+		
+		int thumbsBucketCol = imageCursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+		int thumbsDateCol = imageCursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN);
+		int thumbsIdCol = imageCursor.getColumnIndex(MediaStore.Images.Media._ID);
+		int thumbsDataCol = imageCursor.getColumnIndex(MediaStore.Images.Media.DATA);
+		int thumbsLatiCol = imageCursor.getColumnIndex(MediaStore.Images.Media.LATITUDE);
+		int thumbsLongiCol = imageCursor.getColumnIndex(MediaStore.Images.Media.LONGITUDE);
+		
+		
+		boolean check;
+		picture.picturelist.clear();
+		do {
+			bucketname = imageCursor.getString(thumbsBucketCol);
+			idname = imageCursor.getString(thumbsIdCol);
+			dataname = imageCursor.getString(thumbsDataCol);
+			datename = imageCursor.getString(thumbsDateCol);
+			latiname = imageCursor.getString(thumbsLatiCol);
+			longiname = imageCursor.getString(thumbsLongiCol);
+			
+			
+			check=false;
+			if (idname != null){
+				picture.picturelist.add(new picture(idname,datename,latiname,longiname,dataname,bucketname));
+						
+				for(int j= 0; j< thumbsBucketList.size(); j++ )
+				{
+					if(bucketname.equals(thumbsBucketList.get(j))){
+						check = true;	
+						break;
 					}
-				}while (imageCursor.moveToNext());
-					Bucketnum = new Integer[foldernum];
-/**/				for(int j=0 ; j<foldernum; j++){
-						Bucketnum[j] = R.drawable.boyoung;
-	//					Toast.maketext(this, Integer.toString(foldernum), Toast.LENGTH_SHORT).show();
-}
+				}
+				if(check == false){
+					thumbsBucketList.add(bucketname);
+				}
 			}
-
-			imageCursor.close();
-			return;
-		}
+		}while (imageCursor.moveToNext());
+		
+	}
+		
+		
+		
+		imageCursor.close();
+	return;
+}
 		
 /*		private String getImageInfo(String ImageData, String Location, String thumbID){
 			String imageDataPath = null;
@@ -274,8 +289,14 @@ public class MainActivity extends Activity {
 		default:
 			return false;
 		}
-
-		Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+		
+		/*
+		Date d = new Date(las);
+		SimpleDateFormat format = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
+		String formattedDate = format.format(d);
+		*/
+		if(picture.picturelist.get(0).LATI ==null)
+		Toast.makeText(this,picture.picturelist.get(0).LATI  , Toast.LENGTH_SHORT).show();
 		return true;
 	}
 	

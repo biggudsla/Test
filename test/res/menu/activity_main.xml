@@ -4,22 +4,29 @@
 <item
 		android:showAsAction="always|withText"
 		android:id="@+id/item1"
-		android:icon="@drawable/frame"
+		android:icon="@drawable/ic_launcher"
 		android:title="picture"
 	/>
 	<item
 		android:id="@+id/item2"
 		android:showAsAction="always|withText"
 		android:title="map"
-		android:icon="@drawable/map"
+		android:icon="@drawable/ic_launcher"
 	/>
 	<item
 		android:id="@+id/item3"
 		android:showAsAction="always|withText"
 		android:title="calendar"
-		android:icon="@drawable/calendar"
+		android:icon="@drawable/ic_launcher"
+	/>
+	<item
+		android:id="@+id/item4"
+		android:showAsAction="always|withText"
+		android:title="calendar"
+		android:icon="@drawable/ic_launcher"
 	/>
 
 
 
 </menu>
+
